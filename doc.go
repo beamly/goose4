@@ -26,7 +26,7 @@ Initialisation is reasonably simple:
 
 Mounting se4 is just as easy:
 
-    http.Handle("/service", se4)
+    http.Handle("/service/", se4)
     panic(http.ListenAndServe(":80", nil))
 
 */
