@@ -4,16 +4,19 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 )
 
 // Goose4 holds goose4 configuration and provides functions thereon
 type Goose4 struct {
-	c Config
+	config Config
+	boot   time.Time
 }
 
 // NewGoose4 returns a Goose4 object to be used as net/http handler
 func NewGoose4(c Config) (g Goose4, err error) {
-	g.c = c
+	g.config = c
+	g.boot = time.Now()
 
 	return
 }
@@ -31,7 +34,9 @@ func (g Goose4) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		switch r.URL.Path {
 		case "/service/config":
-			body, err = g.c.Marshal()
+			body, err = g.config.Marshal()
+		case "/service/status":
+			body, err = Status{Config: g.config}.Marshal(g.boot)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 			body, err = Error{http.StatusNotFound, fmt.Sprintf("No such route %q", r.URL.Path)}.Marshal()
