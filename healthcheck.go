@@ -88,8 +88,13 @@ func (h *Healthcheck) runTests(critical, noncritical bool) ([]byte, bool, error)
 	bchan := make(chan Test)
 
 	testList := []Test{}
-	testList = testByStatus(h.Tests, testList, noncritical != true)
-	testList = testByStatus(h.Tests, testList, critical)
+	if critical {
+		testList = testByStatus(h.Tests, testList, true)
+	}
+
+	if noncritical {
+		testList = testByStatus(h.Tests, testList, false)
+	}
 
 	for _, t := range testList {
 		go func(t0 Test) {
