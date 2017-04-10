@@ -11,6 +11,8 @@ import (
 type Goose4 struct {
 	config Config
 	boot   time.Time
+
+	tests []Test
 }
 
 // NewGoose4 returns a Goose4 object to be used as net/http handler
@@ -19,6 +21,12 @@ func NewGoose4(c Config) (g Goose4, err error) {
 	g.boot = time.Now()
 
 	return
+}
+
+// AddTest updates a Goose4 test list for healthchecks. These tests are used
+// to determine whether a service is up or not
+func (g *Goose4) AddTest(t Test) {
+	g.tests = append(g.tests, t)
 }
 
 // ServeHTTP is an http router to serve se4 endpoints

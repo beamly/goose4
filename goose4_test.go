@@ -104,3 +104,44 @@ func TestServeHTTP(t *testing.T) {
 		})
 	}
 }
+
+func TestAddTest(t *testing.T) {
+	for _, test := range []struct {
+		title        string
+		testName     string
+		testCritical bool
+		testFunc     func() bool
+	}{
+		{"A simple, boring test", "a_test", true, func() bool { return true }},
+	} {
+		t.Run(test.title, func(t *testing.T) {
+			t0 := Test{
+				Name:     test.testName,
+				Critical: test.testCritical,
+				F:        test.testFunc,
+			}
+
+			g, _ := NewGoose4(Config{})
+			g.AddTest(t0)
+
+			t.Run("Test Name", func(t *testing.T) {
+				if test.testName != g.tests[0].Name {
+					t.Errorf("expected %q, received %q", test.testName, g.tests[0].Name)
+				}
+			})
+
+			t.Run("Test Critical Value", func(t *testing.T) {
+				if test.testCritical != g.tests[0].Critical {
+					t.Errorf("expected %v, received %v", test.testCritical, g.tests[0].Critical)
+				}
+			})
+
+			// t.Run("Test Function", func(t *testing.T) {
+			//     if !reflect.DeepEqual(test.testFunc, g.tests[0].F) {
+			//         t.Errorf("expected %v, received %v", test.testFunc, g.tests[0].F)
+			//     }
+			// })
+		})
+	}
+
+}

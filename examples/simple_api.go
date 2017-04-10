@@ -8,6 +8,9 @@ import (
 )
 
 func main() {
+	// Create a simple config for goose4. In reality, though, this stuff
+	// is probably more useful created at compile time. See:
+	// https://jamescun.com/golang/compile-ldflags/ for easily consumed docs
 	c := goose4.Config{
 		ArtifactID:      "some-artifact",
 		BuildNumber:     "123",
@@ -20,11 +23,33 @@ func main() {
 		Version:         "v0.0.1",
 	}
 
+	// Create a Goose4 handler
 	se4, err := goose4.NewGoose4(c)
 	if err != nil {
 		panic(err)
 	}
 
+	// Create and add a healthcheck test pointing to a real function
+	someCheck := goose4.Test{
+		Name:     "Check something works or something",
+		Critical: true,       // We want to remove this instance/server from the ASG if this fails
+		F:        dummyCheck, // Note: no brackets
+	}
+	se4.AddTest(someCheck)
+
+	// Add a truly anonymous function
+	anotherCheck := goose4.Test{
+		Name:     "Some important thing",
+		Critical: false, // If the test fails then just don't send traffic to it
+		F:        func() bool { return true },
+	}
+	se4.AddTest(anotherCheck)
+
+	// Mount Goose4 handler for all se4 routes
 	http.Handle("/service/", se4)
 	panic(http.ListenAndServe(":8000", nil))
+}
+
+func dummyCheck() bool {
+	return true
 }
