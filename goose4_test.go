@@ -1,8 +1,37 @@
 package goose4
 
 import (
+	"fmt"
+	"net/http"
+	"net/url"
 	"testing"
 )
+
+type rw struct {
+	headers http.Header
+	body    string
+	status  int
+}
+
+func Newrw() *rw {
+	return &rw{headers: make(http.Header)}
+}
+
+func (r *rw) Header() http.Header {
+	return r.headers
+}
+
+func (r *rw) Write(b []byte) (int, error) {
+	if r.status == 0 {
+		r.WriteHeader(200)
+	}
+	r.body = string(b)
+	return len(b), nil
+}
+
+func (r *rw) WriteHeader(i int) {
+	r.status = i
+}
 
 func TestNewGoose4(t *testing.T) {
 	for _, test := range []struct {
@@ -24,6 +53,54 @@ func TestNewGoose4(t *testing.T) {
 					t.Errorf("NewGoose4: %v", err)
 				}
 			}
+		})
+	}
+}
+
+func TestServeHTTP(t *testing.T) {
+	var emptyOutput = `{"artifact_id":"","build_number":"","build_machine":"","built_by":"","built_when":"0001-01-01T00:00:00Z","compiler_version":"","git_sha1":"","runbook_uri":"","version":""}`
+
+	for _, test := range []struct {
+		path              string
+		method            string
+		expectStatusCode  int
+		expectBody        string
+		expectContentType string
+		ignoreBody        bool // lulz
+	}{
+		{"/service/config", "GET", 200, emptyOutput, "application/json", false},
+		{"/service/status", "GET", 200, "", "application/json", true},
+
+		{"/service/config", "POST", 405, `{"status":405,"message":"Method \"POST\" not allowed"}`, "application/json", false},
+		{"/service/floopydoop", "GET", 404, `{"status":404,"message":"No such route \"/service/floopydoop\""}`, "application/json", false},
+	} {
+		t.Run(fmt.Sprintf("%s %s", test.method, test.path), func(t *testing.T) {
+			g, _ := NewGoose4(Config{})
+			w := Newrw()
+			r := &http.Request{
+				Method: test.method,
+				URL:    &url.URL{Path: test.path},
+			}
+			g.ServeHTTP(w, r)
+
+			t.Run("Status code", func(t *testing.T) {
+				if w.status != test.expectStatusCode {
+					t.Errorf("expected %d, received %d", test.expectStatusCode, w.status)
+				}
+			})
+
+			t.Run("Body text", func(t *testing.T) {
+				if w.body != test.expectBody && !test.ignoreBody {
+					t.Errorf("expected %q, received %q", test.expectBody, w.body)
+				}
+			})
+
+			t.Run("Content Type", func(t *testing.T) {
+				ct := w.headers.Get("Content-Type")
+				if ct != test.expectContentType {
+					t.Errorf("expected %q, received %q", test.expectContentType, ct)
+				}
+			})
 		})
 	}
 }
