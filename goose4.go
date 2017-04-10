@@ -53,6 +53,22 @@ func (g Goose4) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if errs {
 				w.WriteHeader(http.StatusInternalServerError)
 			}
+		case "/service/healthcheck/gtg":
+			h := NewHealthcheck(g.tests)
+			body, errs, err = h.GTG()
+
+			if errs {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+
+		case "/service/healthcheck/asg":
+			h := NewHealthcheck(g.tests)
+			body, errs, err = h.ASG()
+
+			if errs {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+
 		default:
 			w.WriteHeader(http.StatusNotFound)
 			body, err = Error{http.StatusNotFound, fmt.Sprintf("No such route %q", r.URL.Path)}.Marshal()

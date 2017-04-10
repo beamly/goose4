@@ -60,8 +60,23 @@ func NewHealthcheck(t []Test) Healthcheck {
 	}
 }
 
+// All runs all tests; both critical and non-critical
 func (h *Healthcheck) All() (output []byte, errors bool, err error) {
 	output, errors, err = h.runTests(true, true)
+
+	return
+}
+
+// GTG runs non-critical tests: "Good to go"
+func (h *Healthcheck) GTG() (output []byte, errors bool, err error) {
+	output, errors, err = h.runTests(false, true)
+
+	return
+}
+
+// ASG runs critical tests
+func (h *Healthcheck) ASG() (output []byte, errors bool, err error) {
+	output, errors, err = h.runTests(true, false)
 
 	return
 }
