@@ -40,7 +40,7 @@ func main() {
 	// Add a truly anonymous function
 	anotherCheck := goose4.Test{
 		Name:     "Some important thing",
-		Critical: true, // If the test fails then just don't send traffic to it
+		Critical: false, // If the test fails then just don't send traffic to it
 		F:        func() bool { return true },
 	}
 	se4.AddTest(anotherCheck)
