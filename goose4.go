@@ -32,6 +32,7 @@ func (g *Goose4) AddTest(t Test) {
 // ServeHTTP is an http router to serve se4 endpoints
 func (g Goose4) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var body []byte
+	var errs bool
 	var err error
 
 	w.Header().Set("Content-Type", "application/json")
@@ -45,6 +46,13 @@ func (g Goose4) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			body, err = g.config.Marshal()
 		case "/service/status":
 			body, err = Status{Config: g.config}.Marshal(g.boot)
+		case "/service/healthcheck":
+			h := NewHealthcheck(g.tests)
+			body, errs, err = h.All()
+
+			if errs {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
 		default:
 			w.WriteHeader(http.StatusNotFound)
 			body, err = Error{http.StatusNotFound, fmt.Sprintf("No such route %q", r.URL.Path)}.Marshal()
@@ -52,12 +60,12 @@ func (g Goose4) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
+		log.Print(err)
+
 		// This will nuke the original error; this is acceptable due to the risk of leaking
 		// potentially sensitive information otherwise
 		w.WriteHeader(http.StatusInternalServerError)
 		body, err = Error{http.StatusInternalServerError, fmt.Sprint("Internal error")}.Marshal()
-
-		log.Print(err)
 	}
 
 	fmt.Fprintf(w, string(body))

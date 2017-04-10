@@ -1,6 +1,7 @@
 package goose4
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -20,19 +21,95 @@ type Test struct {
 	// set it so a failure just means:
 	// "This instance cannot accept traffic but is, functionally, fine"
 	// - these failures are useful during boot, fo rexample.
-	Critical bool `json:-`
+	Critical bool `json:"-"`
 
 	// F is a function which returns true for successful or false for a failure
-	F func() bool `json:-`
+	F func() bool `json:"-"`
 
-	result   string        `json:"test_result"`
-	duration time.Duration `json:"duration_millis"`
-	testTime time.Time     `json:"tested_at"`
+	// The following are overwritten on whatsit
+	Result   string    `json:"test_result"`
+	Duration string    `json:"duration_millis"`
+	TestTime time.Time `json:"tested_at"`
+}
+
+func (t *Test) run() bool {
+	t.TestTime = time.Now()
+	success := t.F()
+
+	if success {
+		t.Result = "passed"
+	} else {
+		t.Result = "failed"
+	}
+
+	t.Duration = time.Since(t.TestTime).String()
+
+	return success
 }
 
 // Healthcheck provides a full view of healthchecks and whether they fail or not
 type Healthcheck struct {
-	reportTime time.Time     `json:"report_as_of"`
-	duration   time.Duration `json:"report_duration"`
-	tests      []Test        `json:"tests"`
+	ReportTime time.Time `json:"report_as_of"`
+	Duration   string    `json:"report_duration"`
+	Tests      []Test    `json:"tests"`
+}
+
+func NewHealthcheck(t []Test) Healthcheck {
+	return Healthcheck{
+		Tests: t,
+	}
+}
+
+func (h *Healthcheck) All() (output []byte, errors bool, err error) {
+	output, errors, err = h.runTests(true, true)
+
+	return
+}
+
+func (h *Healthcheck) runTests(critical, noncritical bool) ([]byte, bool, error) {
+	h.ReportTime = time.Now()
+
+	var errs bool
+	bchan := make(chan Test)
+
+	testList := []Test{}
+	testList = testByStatus(h.Tests, testList, noncritical != true)
+	testList = testByStatus(h.Tests, testList, critical)
+
+	for _, t := range testList {
+		go func(t0 Test) {
+			if !t0.run() {
+				errs = true
+			}
+
+			bchan <- t0
+		}(t)
+	}
+
+	count := 1
+	completedTests := []Test{}
+	for t := range bchan {
+		completedTests = append(completedTests, t)
+
+		if count == len(testList) {
+			break
+		}
+		count++
+	}
+
+	h.Tests = completedTests
+	h.Duration = time.Since(h.ReportTime).String()
+	j, err := json.Marshal(h)
+
+	return j, errs, err
+}
+
+func testByStatus(t1 []Test, t2 []Test, critical bool) []Test {
+	for _, t := range t1 {
+		if t.Critical == critical {
+			t2 = append(t2, t)
+		}
+	}
+
+	return t2
 }
