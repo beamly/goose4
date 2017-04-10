@@ -54,19 +54,28 @@ func (g Goose4) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 			}
 		case "/service/healthcheck/gtg":
+			w.Header().Set("Content-Type", "text/plain")
+
 			h := NewHealthcheck(g.tests)
-			body, errs, err = h.GTG()
+			_, errs, err = h.GTG()
 
 			if errs {
 				w.WriteHeader(http.StatusInternalServerError)
+				body = []byte(`"Bad"`)
+			} else {
+				body = []byte(`"OK"`)
 			}
 
 		case "/service/healthcheck/asg":
+			w.Header().Set("Content-Type", "text/plain")
 			h := NewHealthcheck(g.tests)
-			body, errs, err = h.ASG()
+			_, errs, err = h.ASG()
 
 			if errs {
 				w.WriteHeader(http.StatusInternalServerError)
+				body = []byte(`"Bad"`)
+			} else {
+				body = []byte(`"OK"`)
 			}
 
 		default:
