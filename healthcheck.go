@@ -96,28 +96,31 @@ func (h *Healthcheck) runTests(critical, noncritical bool) ([]byte, bool, error)
 		testList = testByStatus(h.Tests, testList, false)
 	}
 
-	for _, t := range testList {
-		go func(t0 Test) {
-			if !t0.run() {
-				errs = true
-			}
+	if len(testList) > 0 {
+		for _, t := range testList {
+			go func(t0 Test) {
+				if !t0.run() {
+					errs = true
+				}
 
-			bchan <- t0
-		}(t)
-	}
-
-	count := 1
-	completedTests := []Test{}
-	for t := range bchan {
-		completedTests = append(completedTests, t)
-
-		if count == len(testList) {
-			break
+				bchan <- t0
+			}(t)
 		}
-		count++
+
+		count := 1
+		completedTests := []Test{}
+		for t := range bchan {
+			completedTests = append(completedTests, t)
+
+			if count == len(testList) {
+				break
+			}
+			count++
+		}
+
+		h.Tests = completedTests
 	}
 
-	h.Tests = completedTests
 	h.Duration = time.Since(h.ReportTime).String()
 	j, err := json.Marshal(h)
 
