@@ -132,7 +132,7 @@ func TestHealthcheckGTG(t *testing.T) {
 		{"A simple failing healthcheck", HealthTestFailure, true, false},
 	} {
 		t.Run(test.title, func(t *testing.T) {
-			t0 := Test{F: test.f, Critical: true}
+			t0 := Test{F: test.f, Critical: false}
 			h := Healthcheck{Tests: []Test{t0}}
 
 			_, errs, err := h.GTG()
