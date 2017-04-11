@@ -63,22 +63,28 @@ func TestServeHTTP(t *testing.T) {
 	for _, test := range []struct {
 		path              string
 		method            string
+		tests             []Test
 		expectStatusCode  int
 		expectBody        string
 		expectContentType string
 		ignoreBody        bool // lulz
 	}{
-		{"/service/config", "GET", 200, emptyOutput, "application/json", false},
-		{"/service/status", "GET", 200, "", "application/json", true},
-		{"/service/healthcheck", "GET", 200, "", "application/json", true},
-		{"/service/healthcheck/asg", "GET", 200, `"OK"`, "text/plain", false},
-		{"/service/healthcheck/gtg", "GET", 200, `"OK"`, "text/plain", false},
+		{"/service/config", "GET", []Test{}, 200, emptyOutput, "application/json", false},
+		{"/service/status", "GET", []Test{}, 200, "", "application/json", true},
+		{"/service/healthcheck", "GET", []Test{}, 200, "", "application/json", true},
+		{"/service/healthcheck/asg", "GET", []Test{}, 200, `"OK"`, "text/plain", false},
+		{"/service/healthcheck/gtg", "GET", []Test{}, 200, `"OK"`, "text/plain", false},
 
-		{"/service/config", "POST", 405, `{"status":405,"message":"Method \"POST\" not allowed"}`, "application/json", false},
-		{"/service/floopydoop", "GET", 404, `{"status":404,"message":"No such route \"/service/floopydoop\""}`, "application/json", false},
+		{"/service/config", "POST", []Test{}, 405, `{"status":405,"message":"Method \"POST\" not allowed"}`, "application/json", false},
+		{"/service/floopydoop", "GET", []Test{}, 404, `{"status":404,"message":"No such route \"/service/floopydoop\""}`, "application/json", false},
+
+		{"/service/healthcheck", "GET", []Test{{F: HealthTestFailure, Critical: true}}, 500, "", "application/json", true},
+		{"/service/healthcheck/asg", "GET", []Test{{F: HealthTestFailure, Critical: true}}, 500, `"Bad"`, "text/plain", false},
+		{"/service/healthcheck/gtg", "GET", []Test{{F: HealthTestFailure}}, 500, `"Bad"`, "text/plain", false},
 	} {
 		t.Run(fmt.Sprintf("%s %s", test.method, test.path), func(t *testing.T) {
 			g, _ := NewGoose4(Config{})
+			g.tests = test.tests
 			w := Newrw()
 			r := &http.Request{
 				Method: test.method,
