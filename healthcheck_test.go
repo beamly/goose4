@@ -49,7 +49,7 @@ func TestNewHealthcheck(t *testing.T) {
 			h := NewHealthcheck(test.tests)
 
 			t.Run("Tests are set correctly", func(t *testing.T) {
-				if reflect.DeepEqual(test.tests, h.Tests) {
+				if !reflect.DeepEqual(test.tests, h.Tests) {
 					t.Errorf("expected %v, received %v", test.tests, h.Tests)
 				}
 			})
