@@ -70,6 +70,9 @@ func TestServeHTTP(t *testing.T) {
 	}{
 		{"/service/config", "GET", 200, emptyOutput, "application/json", false},
 		{"/service/status", "GET", 200, "", "application/json", true},
+		{"/service/healthcheck", "GET", 200, "", "application/json", true},
+		{"/service/healthcheck/asg", "GET", 200, `"OK"`, "text/plain", false},
+		{"/service/healthcheck/gtg", "GET", 200, `"OK"`, "text/plain", false},
 
 		{"/service/config", "POST", 405, `{"status":405,"message":"Method \"POST\" not allowed"}`, "application/json", false},
 		{"/service/floopydoop", "GET", 404, `{"status":404,"message":"No such route \"/service/floopydoop\""}`, "application/json", false},
