@@ -49,15 +49,22 @@ Mounting se4 is just as easy:
   * [func (e Error) Marshal() ([]byte, error)](#Error.Marshal)
 * [type Goose4](#Goose4)
   * [func NewGoose4(c Config) (g Goose4, err error)](#NewGoose4)
+  * [func (g *Goose4) AddTest(t Test)](#Goose4.AddTest)
   * [func (g Goose4) ServeHTTP(w http.ResponseWriter, r *http.Request)](#Goose4.ServeHTTP)
+* [type Healthcheck](#Healthcheck)
+  * [func NewHealthcheck(t []Test) Healthcheck](#NewHealthcheck)
+  * [func (h *Healthcheck) ASG() (output []byte, errors bool, err error)](#Healthcheck.ASG)
+  * [func (h *Healthcheck) All() (output []byte, errors bool, err error)](#Healthcheck.All)
+  * [func (h *Healthcheck) GTG() (output []byte, errors bool, err error)](#Healthcheck.GTG)
 * [type Status](#Status)
   * [func (s Status) Marshal(boot time.Time) ([]byte, error)](#Status.Marshal)
 * [type System](#System)
   * [func NewSystem(boot time.Time) System](#NewSystem)
+* [type Test](#Test)
 
 
 #### <a name="pkg-files">Package files</a>
-[config.go](/src/github.com/zeebox/goose4/config.go) [doc.go](/src/github.com/zeebox/goose4/doc.go) [error.go](/src/github.com/zeebox/goose4/error.go) [goose4.go](/src/github.com/zeebox/goose4/goose4.go) [status.go](/src/github.com/zeebox/goose4/status.go) 
+[config.go](/src/github.com/zeebox/goose4/config.go) [doc.go](/src/github.com/zeebox/goose4/doc.go) [error.go](/src/github.com/zeebox/goose4/error.go) [goose4.go](/src/github.com/zeebox/goose4/goose4.go) [healthcheck.go](/src/github.com/zeebox/goose4/healthcheck.go) [status.go](/src/github.com/zeebox/goose4/status.go) 
 
 
 
@@ -127,7 +134,7 @@ Marshal wraps an Error in some json
 
 
 
-## <a name="Goose4">type</a> [Goose4](/src/target/goose4.go?s=130:185#L1)
+## <a name="Goose4">type</a> [Goose4](/src/target/goose4.go?s=130:200#L1)
 ``` go
 type Goose4 struct {
     // contains filtered or unexported fields
@@ -141,7 +148,7 @@ Goose4 holds goose4 configuration and provides functions thereon
 
 
 
-### <a name="NewGoose4">func</a> [NewGoose4](/src/target/goose4.go?s=255:301#L7)
+### <a name="NewGoose4">func</a> [NewGoose4](/src/target/goose4.go?s=270:316#L9)
 ``` go
 func NewGoose4(c Config) (g Goose4, err error)
 ```
@@ -151,11 +158,72 @@ NewGoose4 returns a Goose4 object to be used as net/http handler
 
 
 
-### <a name="Goose4.ServeHTTP">func</a> (Goose4) [ServeHTTP](/src/target/goose4.go?s=405:470#L15)
+### <a name="Goose4.AddTest">func</a> (\*Goose4) [AddTest](/src/target/goose4.go?s=490:522#L18)
+``` go
+func (g *Goose4) AddTest(t Test)
+```
+AddTest updates a Goose4 test list for healthchecks. These tests are used
+to determine whether a service is up or not
+
+
+
+
+### <a name="Goose4.ServeHTTP">func</a> (Goose4) [ServeHTTP](/src/target/goose4.go?s=612:677#L23)
 ``` go
 func (g Goose4) ServeHTTP(w http.ResponseWriter, r *http.Request)
 ```
 ServeHTTP is an http router to serve se4 endpoints
+
+
+
+
+## <a name="Healthcheck">type</a> [Healthcheck](/src/target/healthcheck.go?s=1546:1701#L41)
+``` go
+type Healthcheck struct {
+    ReportTime time.Time `json:"report_as_of"`
+    Duration   string    `json:"report_duration"`
+    Tests      []Test    `json:"tests"`
+}
+```
+Healthcheck provides a full view of healthchecks and whether they fail or not
+
+
+
+
+
+
+
+### <a name="NewHealthcheck">func</a> [NewHealthcheck](/src/target/healthcheck.go?s=1703:1744#L47)
+``` go
+func NewHealthcheck(t []Test) Healthcheck
+```
+
+
+
+
+### <a name="Healthcheck.ASG">func</a> (\*Healthcheck) [ASG](/src/target/healthcheck.go?s=2169:2236#L68)
+``` go
+func (h *Healthcheck) ASG() (output []byte, errors bool, err error)
+```
+ASG runs critical tests
+
+
+
+
+### <a name="Healthcheck.All">func</a> (\*Healthcheck) [All](/src/target/healthcheck.go?s=1840:1907#L54)
+``` go
+func (h *Healthcheck) All() (output []byte, errors bool, err error)
+```
+All runs all tests; both critical and non-critical
+
+
+
+
+### <a name="Healthcheck.GTG">func</a> (\*Healthcheck) [GTG](/src/target/healthcheck.go?s=2013:2080#L61)
+``` go
+func (h *Healthcheck) GTG() (output []byte, errors bool, err error)
+```
+GTG runs non-critical tests: "Good to go"
 
 
 
@@ -213,6 +281,45 @@ System contains system specific data for status responses
 ``` go
 func NewSystem(boot time.Time) System
 ```
+
+
+
+
+## <a name="Test">type</a> [Test](/src/target/healthcheck.go?s=351:1253#L2)
+``` go
+type Test struct {
+    // A simple name to help identify tests from one another
+    // there is no enforcement of uniqueness- it is left to the developer
+    // to ensure these names make sense
+    Name string `json:"test_name"`
+
+    // Critical tests will trigger an `asg` failure- these failures mean, essentially:
+    // "This instance is broken and must be recycled"
+    // The nil value of this is false and may be omited, or set to false explicity, to
+    // set it so a failure just means:
+    // "This instance cannot accept traffic but is, functionally, fine"
+    // - these failures are useful during boot, fo rexample.
+    Critical bool `json:"-"`
+
+    // F is a function which returns true for successful or false for a failure
+    F func() bool `json:"-"`
+
+    // The following are overwritten on whatsit
+    Result   string    `json:"test_result"`
+    Duration string    `json:"duration_millis"`
+    TestTime time.Time `json:"tested_at"`
+}
+```
+Test provides a way of having an API pass it's own healthcheck tests,
+<a href="https://github.com/beamly/SE4/blob/master/SE4.md#healthcheck">https://github.com/beamly/SE4/blob/master/SE4.md#healthcheck</a>)
+into goose4 to be run for the `/healthcheck/` endpoints. These are run in parallel
+and so tests which rely on one another/ sequentialness are not allowed
+
+
+
+
+
+
 
 
 
