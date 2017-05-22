@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
+	"runtime"
 	"testing"
 )
 
@@ -121,7 +123,8 @@ func TestAddTest(t *testing.T) {
 		testCritical bool
 		testFunc     func() bool
 	}{
-		{"A simple, boring test", "a_test", true, func() bool { return true }},
+		{"A simple, boring passing test", "a_test", true, func() bool { return true }},
+		{"A simple, boring non-passing test", "another_test", false, func() bool { return false }},
 	} {
 		t.Run(test.title, func(t *testing.T) {
 			t0 := Test{
@@ -145,12 +148,41 @@ func TestAddTest(t *testing.T) {
 				}
 			})
 
-			// t.Run("Test Function", func(t *testing.T) {
-			//     if !reflect.DeepEqual(test.testFunc, g.tests[0].F) {
-			//         t.Errorf("expected %v, received %v", test.testFunc, g.tests[0].F)
-			//     }
-			// })
+			// This really checks that g.tests[0] has the same name as testFunc; it doesn't
+			// check whether the code is the same.
+			//
+			// We can, though, be reasonably confident this is good enough: they're both
+			// anonymous functions that go internally names.
+			t.Run("Test Function", func(t *testing.T) {
+				t.Run("Valid Function", func(t *testing.T) {
+					if runtime.FuncForPC(reflect.ValueOf(test.testFunc).Pointer()).Name() !=
+						runtime.FuncForPC(reflect.ValueOf(g.tests[0].F).Pointer()).Name() {
+						t.Errorf("expected %v, received %v", test.testFunc, g.tests[0].F)
+					}
+				})
+
+				t.Run("Invalid Function", func(t *testing.T) {
+					fF := func() bool { return true }
+
+					if runtime.FuncForPC(reflect.ValueOf(fF).Pointer()).Name() ==
+						runtime.FuncForPC(reflect.ValueOf(g.tests[0].F).Pointer()).Name() {
+						t.Errorf("expected %v, received %v", test.testFunc, g.tests[0].F)
+					}
+				})
+
+				t.Run("Mutated Function", func(t *testing.T) {
+					g.tests[0].F = func() bool { return false }
+
+					// Validate that go isn't assigning the same name to stuff
+					if runtime.FuncForPC(reflect.ValueOf(test.testFunc).Pointer()).Name() ==
+						runtime.FuncForPC(reflect.ValueOf(g.tests[0].F).Pointer()).Name() {
+						t.Errorf("Received name %v which is a duplicate",
+							runtime.FuncForPC(reflect.ValueOf(g.tests[0].F).Pointer()).Name(),
+						)
+					}
+				})
+
+			})
 		})
 	}
-
 }
