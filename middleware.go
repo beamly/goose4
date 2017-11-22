@@ -22,7 +22,7 @@ func NewMiddleware(h http.Handler) *Middleware {
 
 // ServeHTTP wraps our requests and handles any calls to `/service*`.
 func (m *Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if strings.HasPrefix(r.URL.String(), "/service") {
+	if strings.HasPrefix(r.URL.String(), "/service/") {
 		m.SE4.ServeHTTP(w, r)
 	} else {
 		m.handler.ServeHTTP(w, r)
