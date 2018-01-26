@@ -23,6 +23,9 @@ type Test struct {
 	// - these failures are useful during boot, fo rexample.
 	Critical bool `json:"-"`
 
+	// Silent tests will affect neither `gtg` and `asg` results despite its status
+	Silent bool `json:"-"`
+
 	// F is a function which returns true for successful or false for a failure
 	F func() bool `json:"-"`
 
@@ -127,12 +130,12 @@ func (h *Healthcheck) runTests(critical, noncritical bool) ([]byte, bool, error)
 	return j, errs, err
 }
 
-func testByStatus(t1 []Test, t2 []Test, critical bool) []Test {
-	for _, t := range t1 {
-		if t.Critical == critical {
-			t2 = append(t2, t)
+func testByStatus(tests []Test, allowedTests []Test, critical bool) []Test {
+	for _, t := range tests {
+		if t.Critical == critical && !t.Silent {
+			allowedTests = append(allowedTests, t)
 		}
 	}
 
-	return t2
+	return allowedTests
 }

@@ -61,14 +61,17 @@ func TestHealthcheckAll(t *testing.T) {
 	for _, test := range []struct {
 		title          string
 		f              func() bool
+		silent         bool
 		expectedErrors bool
 		expectError    bool
 	}{
-		{"A simple successful healthcheck", HealthTestSuccess, false, false},
-		{"A simple failing healthcheck", HealthTestFailure, true, false},
+		{"A simple successful healthcheck", HealthTestSuccess, false, false, false},
+		{"A simple failing healthcheck", HealthTestFailure, false, true, false},
+		{"A silent successful healthcheck", HealthTestSuccess, true, false, false},
+		{"A silent failing healthcheck", HealthTestFailure, true, false, false},
 	} {
 		t.Run(test.title, func(t *testing.T) {
-			t0 := Test{F: test.f, Critical: true}
+			t0 := Test{F: test.f, Critical: true, Silent: test.silent}
 			h := Healthcheck{Tests: []Test{t0}}
 
 			_, errs, err := h.All()
@@ -93,14 +96,17 @@ func TestHealthcheckASG(t *testing.T) {
 	for _, test := range []struct {
 		title          string
 		f              func() bool
+		silent         bool
 		expectedErrors bool
 		expectError    bool
 	}{
-		{"A simple successful healthcheck", HealthTestSuccess, false, false},
-		{"A simple failing healthcheck", HealthTestFailure, true, false},
+		{"A simple successful healthcheck", HealthTestSuccess, false, false, false},
+		{"A simple failing healthcheck", HealthTestFailure, false, true, false},
+		{"A silent successful healthcheck", HealthTestSuccess, true, false, false},
+		{"A silent failing healthcheck", HealthTestFailure, true, false, false},
 	} {
 		t.Run(test.title, func(t *testing.T) {
-			t0 := Test{F: test.f, Critical: true}
+			t0 := Test{F: test.f, Critical: true, Silent: test.silent}
 			h := Healthcheck{Tests: []Test{t0}}
 
 			_, errs, err := h.ASG()
@@ -125,14 +131,17 @@ func TestHealthcheckGTG(t *testing.T) {
 	for _, test := range []struct {
 		title          string
 		f              func() bool
+		silent         bool
 		expectedErrors bool
 		expectError    bool
 	}{
-		{"A simple successful healthcheck", HealthTestSuccess, false, false},
-		{"A simple failing healthcheck", HealthTestFailure, true, false},
+		{"A simple successful healthcheck", HealthTestSuccess, false, false, false},
+		{"A simple failing healthcheck", HealthTestFailure, false, true, false},
+		{"A silent successful healthcheck", HealthTestSuccess, true, false, false},
+		{"A silent failing healthcheck", HealthTestFailure, true, false, false},
 	} {
 		t.Run(test.title, func(t *testing.T) {
-			t0 := Test{F: test.f, Critical: false}
+			t0 := Test{F: test.f, Critical: false, Silent: test.silent}
 			h := Healthcheck{Tests: []Test{t0}}
 
 			_, errs, err := h.GTG()
