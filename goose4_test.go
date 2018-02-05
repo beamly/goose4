@@ -80,8 +80,8 @@ func TestServeHTTP(t *testing.T) {
 		{"/service/config", "POST", []Test{}, 405, `{"status":405,"message":"Method \"POST\" not allowed"}`, "application/json", false},
 		{"/service/floopydoop", "GET", []Test{}, 404, `{"status":404,"message":"No such route \"/service/floopydoop\""}`, "application/json", false},
 
-		{"/service/healthcheck", "GET", []Test{{F: HealthTestFailure, Critical: true}}, 500, "", "application/json", true},
-		{"/service/healthcheck/asg", "GET", []Test{{F: HealthTestFailure, Critical: true}}, 500, `"Bad"`, "text/plain", false},
+		{"/service/healthcheck", "GET", []Test{{F: HealthTestFailure}}, 500, "", "application/json", true},
+		{"/service/healthcheck/asg", "GET", []Test{{F: HealthTestFailure}}, 500, `"Bad"`, "text/plain", false},
 		{"/service/healthcheck/gtg", "GET", []Test{{F: HealthTestFailure}}, 500, `"Bad"`, "text/plain", false},
 	} {
 		t.Run(fmt.Sprintf("%s %s", test.method, test.path), func(t *testing.T) {
@@ -118,19 +118,32 @@ func TestServeHTTP(t *testing.T) {
 
 func TestAddTest(t *testing.T) {
 	for _, test := range []struct {
-		title        string
-		testName     string
-		testCritical bool
-		testFunc     func() bool
+		title              string
+		testName           string
+		testRequiredForASG bool
+		testRequiredForGTG bool
+		testFunc           func() bool
 	}{
-		{"A simple, boring passing test", "a_test", true, func() bool { return true }},
-		{"A simple, boring non-passing test", "another_test", false, func() bool { return false }},
+		{title: "A simple, boring passing test",
+			testName:           "a_test",
+			testRequiredForASG: true,
+			testRequiredForGTG: true,
+			testFunc:           func() bool { return true },
+		},
+		{
+			title:              "A simple, boring non-passing test",
+			testName:           "another_test",
+			testRequiredForASG: true,
+			testRequiredForGTG: true,
+			testFunc:           func() bool { return false },
+		},
 	} {
 		t.Run(test.title, func(t *testing.T) {
 			t0 := Test{
-				Name:     test.testName,
-				Critical: test.testCritical,
-				F:        test.testFunc,
+				Name:           test.testName,
+				RequiredForASG: test.testRequiredForASG,
+				RequiredForGTG: test.testRequiredForGTG,
+				F:              test.testFunc,
 			}
 
 			g, _ := NewGoose4(Config{})
@@ -142,9 +155,15 @@ func TestAddTest(t *testing.T) {
 				}
 			})
 
-			t.Run("Test Critical Value", func(t *testing.T) {
-				if test.testCritical != g.tests[0].Critical {
-					t.Errorf("expected %v, received %v", test.testCritical, g.tests[0].Critical)
+			t.Run("Test Required For ASG Value", func(t *testing.T) {
+				if test.testRequiredForASG != g.tests[0].RequiredForASG {
+					t.Errorf("expected %v, received %v", test.testRequiredForASG, g.tests[0].RequiredForASG)
+				}
+			})
+
+			t.Run("Test Required For GTG Value", func(t *testing.T) {
+				if test.testRequiredForGTG != g.tests[0].RequiredForGTG {
+					t.Errorf("expected %v, received %v", test.testRequiredForGTG, g.tests[0].RequiredForGTG)
 				}
 			})
 
