@@ -59,10 +59,8 @@ func NewHealthcheck(t []Test) Healthcheck {
 	}
 }
 
-type healthcheckExecutionMode int
-
 const (
-	testAll healthcheckExecutionMode = iota
+	testAll = iota
 	testASGOnly
 	testGTGOnly
 )
@@ -82,7 +80,7 @@ func (h *Healthcheck) ASG() (output []byte, errors bool, err error) {
 	return h.executeTests(testASGOnly)
 }
 
-func (h *Healthcheck) executeTests(mode healthcheckExecutionMode) ([]byte, bool, error) {
+func (h *Healthcheck) executeTests(mode int) ([]byte, bool, error) {
 	h.ReportTime = time.Now()
 
 	var errs bool
@@ -121,7 +119,7 @@ func (h *Healthcheck) executeTests(mode healthcheckExecutionMode) ([]byte, bool,
 	return j, errs, err
 }
 
-func (h *Healthcheck) getTestsByMode(mode healthcheckExecutionMode) (filteredTests []Test) {
+func (h *Healthcheck) getTestsByMode(mode int) (filteredTests []Test) {
 	for _, t := range h.Tests {
 		switch mode {
 		case testASGOnly:
