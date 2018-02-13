@@ -67,7 +67,7 @@ const (
 	testGTGOnly
 )
 
-// All runs all tests; both critical and non-critical
+// All runs all tests; both RequiredByGTG and RequiredByASG options are ignored
 func (h *Healthcheck) All() (output []byte, errors bool, err error) {
 	return h.executeTests(testAll)
 }
@@ -77,7 +77,7 @@ func (h *Healthcheck) GTG() (output []byte, errors bool, err error) {
 	return h.executeTests(testGTGOnly)
 }
 
-// ASG runs tests that have RequiredByGTG option enabled
+// ASG runs tests that have RequiredByASG option enabled
 func (h *Healthcheck) ASG() (output []byte, errors bool, err error) {
 	return h.executeTests(testASGOnly)
 }
