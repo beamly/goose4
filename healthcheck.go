@@ -59,35 +59,36 @@ func NewHealthcheck(t []Test) Healthcheck {
 	}
 }
 
+type healthcheckExecutionMode int
+
+const (
+	testAll healthcheckExecutionMode = iota
+	testASGOnly
+	testGTGOnly
+)
+
 // All runs all tests; both critical and non-critical
 func (h *Healthcheck) All() (output []byte, errors bool, err error) {
-	output, errors, err = h.runTests(false, false)
-
-	return
+	return h.executeTests(testAll)
 }
 
-// GTG runs non-critical tests: "Good to go"
+// GTG runs tests that have RequiredByGTG option enabled
 func (h *Healthcheck) GTG() (output []byte, errors bool, err error) {
-	output, errors, err = h.runTests(false, true)
-
-	return
+	return h.executeTests(testGTGOnly)
 }
 
-// ASG runs critical tests
+// ASG runs tests that have RequiredByGTG option enabled
 func (h *Healthcheck) ASG() (output []byte, errors bool, err error) {
-	output, errors, err = h.runTests(true, false)
-
-	return
+	return h.executeTests(testASGOnly)
 }
 
-func (h *Healthcheck) runTests(affectASG, affectGTG bool) ([]byte, bool, error) {
+func (h *Healthcheck) executeTests(mode healthcheckExecutionMode) ([]byte, bool, error) {
 	h.ReportTime = time.Now()
 
 	var errs bool
 	bchan := make(chan Test)
 
-	testList := []Test{}
-	testList = testByStatus(h.Tests, testList, affectASG, affectGTG)
+	testList := h.getTestsByMode(mode)
 
 	if len(testList) > 0 {
 		for _, t := range testList {
@@ -120,15 +121,20 @@ func (h *Healthcheck) runTests(affectASG, affectGTG bool) ([]byte, bool, error) 
 	return j, errs, err
 }
 
-func testByStatus(tests []Test, allowedTests []Test, affectASG, affectGTG bool) []Test {
-	for _, t := range tests {
-		if t.RequiredForASG == affectASG {
-			allowedTests = append(allowedTests, t)
-		}
-		if t.RequiredForGTG == affectGTG {
-			allowedTests = append(allowedTests, t)
+func (h *Healthcheck) getTestsByMode(mode healthcheckExecutionMode) (filteredTests []Test) {
+	for _, t := range h.Tests {
+		switch mode {
+		case testASGOnly:
+			if t.RequiredForASG {
+				filteredTests = append(filteredTests, t)
+			}
+		case testGTGOnly:
+			if t.RequiredForGTG {
+				filteredTests = append(filteredTests, t)
+			}
+		case testAll:
+			filteredTests = append(filteredTests, t)
 		}
 	}
-
-	return allowedTests
+	return
 }

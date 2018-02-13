@@ -59,12 +59,12 @@ func TestNewHealthcheck(t *testing.T) {
 
 func TestHealthcheckAll(t *testing.T) {
 	for _, test := range []struct {
-		title          string
-		f              func() bool
-		requiredForASG bool
-		requiredForGTG bool
-		expectedErrors bool
-		expectError    bool
+		title                   string
+		f                       func() bool
+		requiredForASG          bool
+		requiredForGTG          bool
+		expectHealthcheckErrors bool
+		expectError             bool
 	}{
 		{"A successful healthcheck, requires ASG", HealthTestSuccess, true, false, false, false},
 		{"A successful healthcheck, requires GTG", HealthTestSuccess, false, true, false, false},
@@ -72,8 +72,8 @@ func TestHealthcheckAll(t *testing.T) {
 		{"A failing healthcheck, requires GTG", HealthTestFailure, false, true, true, false},
 		{"A successful healthcheck, requires ASG and GTG", HealthTestSuccess, true, true, false, false},
 		{"A successful healthcheck", HealthTestSuccess, false, false, false, false},
-		{"A failing healthcheck, requires ASG and GTG", HealthTestFailure, true, true, false, false},
-		{"A failing healthcheck", HealthTestFailure, true, true, false, false},
+		{"A failing healthcheck, requires ASG and GTG", HealthTestFailure, true, true, true, false},
+		{"A failing healthcheck", HealthTestFailure, false, false, true, false},
 	} {
 		t.Run(test.title, func(t *testing.T) {
 			t0 := Test{F: test.f, RequiredForASG: test.requiredForASG, RequiredForGTG: test.requiredForGTG}
@@ -81,15 +81,15 @@ func TestHealthcheckAll(t *testing.T) {
 
 			_, errs, err := h.All()
 
-			t.Run("Test errors", func(t *testing.T) {
-				if test.expectedErrors != errs {
-					t.Errorf("expected %v, received %v", test.expectedErrors, errs)
+			t.Run("Test healthcheck errors", func(t *testing.T) {
+				if test.expectHealthcheckErrors != errs {
+					t.Errorf("expected %v, received %v", test.expectHealthcheckErrors, errs)
 				}
 			})
 
 			t.Run("Test returns error", func(t *testing.T) {
 				if test.expectError == (err == nil) {
-					t.Errorf("expected %v, received %v", test.expectedErrors, errs)
+					t.Errorf("expected %v, received %v", test.expectError, (err != nil))
 				}
 			})
 		})

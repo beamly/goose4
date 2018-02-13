@@ -80,9 +80,9 @@ func TestServeHTTP(t *testing.T) {
 		{"/service/config", "POST", []Test{}, 405, `{"status":405,"message":"Method \"POST\" not allowed"}`, "application/json", false},
 		{"/service/floopydoop", "GET", []Test{}, 404, `{"status":404,"message":"No such route \"/service/floopydoop\""}`, "application/json", false},
 
-		{"/service/healthcheck", "GET", []Test{{F: HealthTestFailure}}, 500, "", "application/json", true},
-		{"/service/healthcheck/asg", "GET", []Test{{F: HealthTestFailure}}, 500, `"Bad"`, "text/plain", false},
-		{"/service/healthcheck/gtg", "GET", []Test{{F: HealthTestFailure}}, 500, `"Bad"`, "text/plain", false},
+		{"/service/healthcheck", "GET", []Test{{F: HealthTestFailure, RequiredForASG: true, RequiredForGTG: true}}, 500, "", "application/json", true},
+		{"/service/healthcheck/asg", "GET", []Test{{F: HealthTestFailure, RequiredForASG: true}}, 500, `"Bad"`, "text/plain", false},
+		{"/service/healthcheck/gtg", "GET", []Test{{F: HealthTestFailure, RequiredForGTG: true}}, 500, `"Bad"`, "text/plain", false},
 	} {
 		t.Run(fmt.Sprintf("%s %s", test.method, test.path), func(t *testing.T) {
 			g, _ := NewGoose4(Config{})
