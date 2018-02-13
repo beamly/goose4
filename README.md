@@ -293,13 +293,11 @@ type Test struct {
     // to ensure these names make sense
     Name string `json:"test_name"`
 
-    // Critical tests will trigger an `asg` failure- these failures mean, essentially:
-    // "This instance is broken and must be recycled"
-    // The nil value of this is false and may be omited, or set to false explicity, to
-    // set it so a failure just means:
-    // "This instance cannot accept traffic but is, functionally, fine"
-    // - these failures are useful during boot, fo rexample.
-    Critical bool `json:"-"`
+    // RequiredForASG toggles whether the result of this Test is taken into account when checking ASG status
+    RequiredForASG bool `json:"-"`
+
+    // RequiredForGTG toggles whether the result of this Test is taken into account when checking GTG status
+    RequiredForGTG bool `json:"-"`
 
     // F is a function which returns true for successful or false for a failure
     F func() bool `json:"-"`
