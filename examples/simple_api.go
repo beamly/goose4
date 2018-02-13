@@ -30,20 +30,20 @@ func main() {
 	}
 
 	// Create and add a healthcheck test pointing to a real function
-	someCheck := goose4.Test{
-		Name:     "Check something works or something",
-		Critical: true,       // We want to remove this instance/server from the ASG if this fails
-		F:        dummyCheck, // Note: no brackets
-	}
-	se4.AddTest(someCheck)
+	se4.AddTest(goose4.Test{
+		Name:           "Check something works or something",
+		RequiredForASG: true,
+		RequiredForGTG: true,
+		F:              dummyCheck, // Note: no brackets
+	})
 
 	// Add a truly anonymous function
-	anotherCheck := goose4.Test{
-		Name:     "Some important thing",
-		Critical: false, // If the test fails then just don't send traffic to it
-		F:        func() bool { return true },
-	}
-	se4.AddTest(anotherCheck)
+	se4.AddTest(goose4.Test{
+		Name:           "Some important thing",
+		RequiredForASG: true,
+		RequiredForGTG: true,
+		F:              func() bool { return true },
+	})
 
 	// Mount Goose4 handler for all se4 routes
 	http.Handle("/service/", se4)

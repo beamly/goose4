@@ -59,29 +59,37 @@ func TestNewHealthcheck(t *testing.T) {
 
 func TestHealthcheckAll(t *testing.T) {
 	for _, test := range []struct {
-		title          string
-		f              func() bool
-		expectedErrors bool
-		expectError    bool
+		title                   string
+		f                       func() bool
+		requiredForASG          bool
+		requiredForGTG          bool
+		expectHealthcheckErrors bool
+		expectError             bool
 	}{
-		{"A simple successful healthcheck", HealthTestSuccess, false, false},
-		{"A simple failing healthcheck", HealthTestFailure, true, false},
+		{"A successful healthcheck, requires ASG", HealthTestSuccess, true, false, false, false},
+		{"A successful healthcheck, requires GTG", HealthTestSuccess, false, true, false, false},
+		{"A failing healthcheck, requires ASG", HealthTestFailure, true, false, true, false},
+		{"A failing healthcheck, requires GTG", HealthTestFailure, false, true, true, false},
+		{"A successful healthcheck, requires ASG and GTG", HealthTestSuccess, true, true, false, false},
+		{"A successful healthcheck", HealthTestSuccess, false, false, false, false},
+		{"A failing healthcheck, requires ASG and GTG", HealthTestFailure, true, true, true, false},
+		{"A failing healthcheck", HealthTestFailure, false, false, true, false},
 	} {
 		t.Run(test.title, func(t *testing.T) {
-			t0 := Test{F: test.f, Critical: true}
+			t0 := Test{F: test.f, RequiredForASG: test.requiredForASG, RequiredForGTG: test.requiredForGTG}
 			h := Healthcheck{Tests: []Test{t0}}
 
 			_, errs, err := h.All()
 
-			t.Run("Test errors", func(t *testing.T) {
-				if test.expectedErrors != errs {
-					t.Errorf("expected %v, received %v", test.expectedErrors, errs)
+			t.Run("Test healthcheck errors", func(t *testing.T) {
+				if test.expectHealthcheckErrors != errs {
+					t.Errorf("expected %v, received %v", test.expectHealthcheckErrors, errs)
 				}
 			})
 
 			t.Run("Test returns error", func(t *testing.T) {
 				if test.expectError == (err == nil) {
-					t.Errorf("expected %v, received %v", test.expectedErrors, errs)
+					t.Errorf("expected %v, received %v", test.expectError, (err != nil))
 				}
 			})
 		})
@@ -93,14 +101,17 @@ func TestHealthcheckASG(t *testing.T) {
 	for _, test := range []struct {
 		title          string
 		f              func() bool
+		requiredForASG bool
 		expectedErrors bool
 		expectError    bool
 	}{
-		{"A simple successful healthcheck", HealthTestSuccess, false, false},
-		{"A simple failing healthcheck", HealthTestFailure, true, false},
+		{"A critical successful healthcheck", HealthTestSuccess, true, false, false},
+		{"A critical failing healthcheck", HealthTestFailure, true, true, false},
+		{"A non-critical successful healthcheck", HealthTestSuccess, false, false, false},
+		{"A non-critical failing healthcheck", HealthTestFailure, false, false, false},
 	} {
 		t.Run(test.title, func(t *testing.T) {
-			t0 := Test{F: test.f, Critical: true}
+			t0 := Test{F: test.f, RequiredForASG: test.requiredForASG, RequiredForGTG: true}
 			h := Healthcheck{Tests: []Test{t0}}
 
 			_, errs, err := h.ASG()
@@ -125,14 +136,17 @@ func TestHealthcheckGTG(t *testing.T) {
 	for _, test := range []struct {
 		title          string
 		f              func() bool
+		requiredForGTG bool
 		expectedErrors bool
 		expectError    bool
 	}{
-		{"A simple successful healthcheck", HealthTestSuccess, false, false},
-		{"A simple failing healthcheck", HealthTestFailure, true, false},
+		{"A critical successful healthcheck", HealthTestSuccess, true, false, false},
+		{"A critical failing healthcheck", HealthTestFailure, true, true, false},
+		{"A non-critical successful healthcheck", HealthTestSuccess, false, false, false},
+		{"A non-critical failing healthcheck", HealthTestFailure, false, false, false},
 	} {
 		t.Run(test.title, func(t *testing.T) {
-			t0 := Test{F: test.f, Critical: false}
+			t0 := Test{F: test.f, RequiredForASG: true, RequiredForGTG: test.requiredForGTG}
 			h := Healthcheck{Tests: []Test{t0}}
 
 			_, errs, err := h.GTG()

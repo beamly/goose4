@@ -15,13 +15,11 @@ type Test struct {
 	// to ensure these names make sense
 	Name string `json:"test_name"`
 
-	// Critical tests will trigger an `asg` failure- these failures mean, essentially:
-	// "This instance is broken and must be recycled"
-	// The nil value of this is false and may be omited, or set to false explicity, to
-	// set it so a failure just means:
-	// "This instance cannot accept traffic but is, functionally, fine"
-	// - these failures are useful during boot, fo rexample.
-	Critical bool `json:"-"`
+	// RequiredForASG toggles whether the result of this Test is taken into account when checking ASG status
+	RequiredForASG bool `json:"-"`
+
+	// RequiredForGTG toggles whether the result of this Test is taken into account when checking GTG status
+	RequiredForGTG bool `json:"-"`
 
 	// F is a function which returns true for successful or false for a failure
 	F func() bool `json:"-"`
@@ -54,47 +52,41 @@ type Healthcheck struct {
 	Tests      []Test    `json:"tests"`
 }
 
+// NewHealthcheck creates a new Healthcheck
 func NewHealthcheck(t []Test) Healthcheck {
 	return Healthcheck{
 		Tests: t,
 	}
 }
 
-// All runs all tests; both critical and non-critical
+const (
+	testAll = iota
+	testASGOnly
+	testGTGOnly
+)
+
+// All runs all tests; both RequiredByGTG and RequiredByASG options are ignored
 func (h *Healthcheck) All() (output []byte, errors bool, err error) {
-	output, errors, err = h.runTests(true, true)
-
-	return
+	return h.executeTests(testAll)
 }
 
-// GTG runs non-critical tests: "Good to go"
+// GTG runs tests that have RequiredByGTG option enabled
 func (h *Healthcheck) GTG() (output []byte, errors bool, err error) {
-	output, errors, err = h.runTests(false, true)
-
-	return
+	return h.executeTests(testGTGOnly)
 }
 
-// ASG runs critical tests
+// ASG runs tests that have RequiredByASG option enabled
 func (h *Healthcheck) ASG() (output []byte, errors bool, err error) {
-	output, errors, err = h.runTests(true, false)
-
-	return
+	return h.executeTests(testASGOnly)
 }
 
-func (h *Healthcheck) runTests(critical, noncritical bool) ([]byte, bool, error) {
+func (h *Healthcheck) executeTests(mode int) ([]byte, bool, error) {
 	h.ReportTime = time.Now()
 
 	var errs bool
 	bchan := make(chan Test)
 
-	testList := []Test{}
-	if critical {
-		testList = testByStatus(h.Tests, testList, true)
-	}
-
-	if noncritical {
-		testList = testByStatus(h.Tests, testList, false)
-	}
+	testList := h.getTestsByMode(mode)
 
 	if len(testList) > 0 {
 		for _, t := range testList {
@@ -127,12 +119,20 @@ func (h *Healthcheck) runTests(critical, noncritical bool) ([]byte, bool, error)
 	return j, errs, err
 }
 
-func testByStatus(t1 []Test, t2 []Test, critical bool) []Test {
-	for _, t := range t1 {
-		if t.Critical == critical {
-			t2 = append(t2, t)
+func (h *Healthcheck) getTestsByMode(mode int) (filteredTests []Test) {
+	for _, t := range h.Tests {
+		switch mode {
+		case testASGOnly:
+			if t.RequiredForASG {
+				filteredTests = append(filteredTests, t)
+			}
+		case testGTGOnly:
+			if t.RequiredForGTG {
+				filteredTests = append(filteredTests, t)
+			}
+		case testAll:
+			filteredTests = append(filteredTests, t)
 		}
 	}
-
-	return t2
+	return
 }
