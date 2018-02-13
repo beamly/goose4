@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -48,7 +47,6 @@ func main() {
 
 	// Mount Goose4 handler for all se4 routes
 	http.Handle("/service/", se4)
-	fmt.Println("Simple API is listening on port 8000")
 	panic(http.ListenAndServe(":8000", nil))
 }
 
