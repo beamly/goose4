@@ -173,34 +173,33 @@ func TestAddTest(t *testing.T) {
 			// We can, though, be reasonably confident this is good enough: they're both
 			// anonymous functions that go internally names.
 			t.Run("Test Function", func(t *testing.T) {
+				t0Name := runtime.FuncForPC(reflect.ValueOf(test.testFunc).Pointer()).Name()
+				t1Name := runtime.FuncForPC(reflect.ValueOf(g.tests[0].F).Pointer()).Name()
+
 				t.Run("Valid Function", func(t *testing.T) {
-					if runtime.FuncForPC(reflect.ValueOf(test.testFunc).Pointer()).Name() !=
-						runtime.FuncForPC(reflect.ValueOf(g.tests[0].F).Pointer()).Name() {
-						t.Errorf("expected %v, received %v", test.testFunc, g.tests[0].F)
+					if t0Name != t1Name {
+						t.Errorf("expected %v, received %v", t0Name, t1Name)
 					}
 				})
 
 				t.Run("Invalid Function", func(t *testing.T) {
 					fF := func() bool { return true }
+					fFName := runtime.FuncForPC(reflect.ValueOf(fF).Pointer()).Name()
 
-					if runtime.FuncForPC(reflect.ValueOf(fF).Pointer()).Name() ==
-						runtime.FuncForPC(reflect.ValueOf(g.tests[0].F).Pointer()).Name() {
-						t.Errorf("expected %v, received %v", test.testFunc, g.tests[0].F)
+					if fFName == t1Name {
+						t.Errorf("expected %v, received %v", fFName, t1Name)
 					}
 				})
 
 				t.Run("Mutated Function", func(t *testing.T) {
 					g.tests[0].F = func() bool { return false }
+					t0Name := runtime.FuncForPC(reflect.ValueOf(test.testFunc).Pointer()).Name()
 
 					// Validate that go isn't assigning the same name to stuff
-					if runtime.FuncForPC(reflect.ValueOf(test.testFunc).Pointer()).Name() ==
-						runtime.FuncForPC(reflect.ValueOf(g.tests[0].F).Pointer()).Name() {
-						t.Errorf("Received name %v which is a duplicate",
-							runtime.FuncForPC(reflect.ValueOf(g.tests[0].F).Pointer()).Name(),
-						)
+					if t0Name != t1Name {
+						t.Errorf("Received name %v which is a duplicate", t0Name)
 					}
 				})
-
 			})
 		})
 	}
