@@ -15,7 +15,7 @@ type rw struct {
 	status  int
 }
 
-func Newrw() *rw {
+func newrw() *rw {
 	return &rw{headers: make(http.Header)}
 }
 
@@ -87,7 +87,7 @@ func TestServeHTTP(t *testing.T) {
 		t.Run(fmt.Sprintf("%s %s", test.method, test.path), func(t *testing.T) {
 			g, _ := NewGoose4(Config{})
 			g.tests = test.tests
-			w := Newrw()
+			w := newrw()
 			r := &http.Request{
 				Method: test.method,
 				URL:    &url.URL{Path: test.path},
