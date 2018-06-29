@@ -35,6 +35,10 @@ func (g Goose4) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var errs bool
 	var err error
 
+	w.Header().Set("access-control-allow-origin", "*")
+	w.Header().Set("access-control-allow-headers", "origin, content-type, accept")
+	w.Header().Set("access-control-allow-methods", "GET")
+
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method != http.MethodGet {
