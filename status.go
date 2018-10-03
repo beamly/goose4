@@ -40,6 +40,8 @@ type System struct {
 	UpSince     string `json:"up_since"`
 }
 
+// NewSystem will generate a goose4.System and fill it with information
+// taken from the system on which it is instantiated
 func NewSystem(boot time.Time) System {
 	h, _ := host.Info()
 	l, _ := load.Avg()
